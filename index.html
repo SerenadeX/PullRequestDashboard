@@ -52,7 +52,7 @@
                 <ul class="nav navbar-nav" id="repos"></ul>
                 <form class="navbar-form navbar-left">
                     <div class="form-group">
-                      <input type="text" class="form-control" id="repo-filter" placeholder="Filter repositories"/>
+                      <input type="text" class="form-control" id="repo-filter" placeholder="Exclude repositories"/>
                     </div>
                 </form>
                 <ul class="nav navbar-nav navbar-right" id="auth"></ul>
@@ -484,12 +484,16 @@
                 
                                 getRepos(user_api, function(repos) {
                                     var filteredRepos = [];
-                                    var repoFilter = new RegExp(localStorage['repo-filter']);
-                                    $.each(repos, function(i, repo) {
-                                        if (repo.name.match(repoFilter) != null) {
-                                            filteredRepos.push(repo);
-                                        }
-                                    });
+                                    if (localStorage['repo-filter'].length <= 0) {
+                                    	filteredRepos = repos
+                                    } else {
+                                    	var repoFilter = new RegExp(localStorage['repo-filter']);
+                                    	$.each(repos, function(i, repo) {
+                                        	if (repo.name.match(repoFilter) == null) {
+                                         	   filteredRepos.push(repo);
+                                        	}
+                                    	});
+                                    }
                                 
                                     var owners = {};
                                     $.each(filteredRepos, function(i, repo) {
