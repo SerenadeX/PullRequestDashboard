@@ -216,7 +216,6 @@
         <script>
             $(function() {
                 var approveSentinels = [ ':+1:', ':v:', ':metal:', '👍' ];
-                var rejectSentinels = [ ':-1:', ':poop:', ':facepunch:', '👎' ];
                 var ignoredSentinels = [ 'retry' ];
                 var buildSuccessSentinels = ['All is well', 'build succeeded', 'PASS'];
                 var buildFailureSentinels = ['build failed', 'FAIL'];
@@ -260,9 +259,6 @@
 
                                     if (hasSentinel(body, approveSentinels)) {
                                         approve_status = 'approved';
-                                        approve_url = comment.html_url;
-                                    } else if (hasSentinel(body, rejectSentinels)) {
-                                        approve_status = 'pending_changes';
                                         approve_url = comment.html_url;
                                     } else if (pull.user.login == comment.user.login) {
                                         approve_status = 'pending_review';
