@@ -257,7 +257,7 @@
                                         })
                                     };
 
-                                    if (!hasSentinel(body, ignoredSentinels) {
+                                    if (!hasSentinel(body, ignoredSentinels)) {
                                         if (hasSentinel(body, approveSentinels)) {
                                             approve_status = 'approved';
                                             approve_url = comment.html_url;
@@ -269,7 +269,7 @@
                                             approve_url = comment.html_url;
                                         }
                                     }
-                                    
+    
                                     if (first_pass_day == '' && hasSentinel(body, buildSuccessSentinels)) {
                                         first_pass_day = comment_date;
                                         first_pass_url = comment.html_url;
