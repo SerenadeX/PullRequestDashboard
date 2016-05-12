@@ -257,14 +257,14 @@
                                         })
                                     };
 
-                                    if (!hasSentinel(body, ignoredSentinels)) {
+                                    if (!hasSentinel(body, ignoredSentinels) && !hasSentinel(body, buildFailureSentinels) && !hasSentinel(body, buildSuccessSentinels)) {
                                         if (hasSentinel(body, approveSentinels)) {
                                             approve_status = 'approved';
                                             approve_url = comment.html_url;
                                         } else if (pull.user.login == comment.user.login) {
                                             approve_status = 'pending_review';
                                             approve_url = comment.html_url;
-                                        } else if (!hasSentinel(body, buildFailureSentinels) && !hasSentinel(body, buildSuccessSentinels))) {
+                                        } else {
                                             approve_status = 'pending_changes';
                                             approve_url = comment.html_url;
                                         }
