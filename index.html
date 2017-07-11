@@ -6,14 +6,14 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
         <title>Pull Request Dashboard</title>
-        <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootswatch/3.2.0/yeti/bootstrap.min.css"/>
+        <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootswatch/3.2.0/yeti/bootstrap.min.css"/>
         <link rel="stylesheet" href="Vendor/tablesorter/css/theme.bootstrap.css"/>
-        
+
         <style>
             .tablesorter-bootstrap .tablesorter-header {
                 background-color: transparent;
             }
-        
+
             th.identifier,
             tr.pull td.number {
                 text-align: right;
@@ -57,7 +57,7 @@
                 <ul class="nav navbar-nav navbar-right" id="auth"></ul>
             </div>
         </div>
-        
+
         <div class="modal fade" id="auth-modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -92,7 +92,7 @@
                 </div>
             </div>
         </div>
-    
+
         <div class="container-fluid">
             <table class="table table-hover tablesorter" id="pull-requests">
                 <thead>
@@ -105,18 +105,17 @@
                         <th>Requester</th>
                         <th class="approve">CR</th>
                         <th class="verify">V</th>
-                        <th class="pass_day">D</th>
                     </tr>
                 </thead>
                 <tbody>
                 </tbody>
             </table>
-    
+
             <div class="clearfix">
                 <div id="approve-legend" class="pull-left">
-                    <p class="text-muted">Make a comment on a pull request with <span class="mono">:+1:</span> to approve or <span class="mono">:-1:</span> to reject.</p>
+                    <p class="text-muted">Approve or request changes on a pull request to update the CR status.</p>
                 </div>
-            
+
                 <div class="pull-right">
                     <p class="text-muted">
                         <iframe src="http://ghbtns.com/github-btn.html?user=GalacticMegacorp&repo=PullRequestDashboard&type=fork"
@@ -124,7 +123,7 @@
                     </p>
                 </div>
             </div>
-            
+
             <div class="row">
                 <div class="col-sm-4 col-md-3">
                     <p><strong>CR Legend</strong></p>
@@ -166,22 +165,19 @@
                 </div>
             </div>
         </div>
-        
+
         <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
         <script src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
         <script src="http://cdnjs.cloudflare.com/ajax/libs/handlebars.js/1.3.0/handlebars.min.js"></script>
         <script src="http://cdnjs.cloudflare.com/ajax/libs/async/1.22/async.min.js"></script>
         <script src="http://cdnjs.cloudflare.com/ajax/libs/showdown/0.3.1/showdown.min.js"></script>
-        <script src="Vendor/github/lib/underscore-min.js"></script>
-        <script src="Vendor/github/lib/base64.js"></script>
-        <script src="Vendor/github/github.js"></script>
         <script src="Vendor/tablesorter/js/jquery.tablesorter.js"></script>
         <script src="Vendor/tablesorter/js/jquery.tablesorter.widgets.js"></script>
-        
+
         <script id="auth-not-signed-in-template" type="text/x-handlebars-template">
             <li><a href="#" class="auth-sign-in">Connect to GitHub</a></li>
         </script>
-        
+
         <script id="auth-signed-in-template" type="text/x-handlebars-template">
             <li class="dropdown">
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown"><span id="username">{{user.login}}</span> <b class="caret"></b></a>
@@ -190,7 +186,7 @@
                 </ul>
             </li>
         </script>
-        
+
         <script id="pull-requests-rows-template" type="text/x-handlebars-template">
             {{#each pulls}}
             <tr class="pull" id="pull-{{id}}">
@@ -208,326 +204,11 @@
                 <td class="requester"><a href="{{user.html_url}}"><img class="gravatar" src="{{user.avatar_url}}" width="18px" height="18px" /></a> <a href="{{user.html_url}}">{{user.login}}</a></td>
                 <td class="approve"><span class="text-muted">...</span></td>
                 <td class="verify"><span class="text-muted">...</span></td>
-                <td class="pass_day"><span class="text-muted">...</span></td>
             </tr>
             {{/each}}
         </script>
-        
-        <script>
-            $(function() {
-                var approveSentinels = [ ':+1:', ':v:', ':metal:', '👍' ];
-                var ignoredSentinels = [ 'retry', 'Retry' ];
-                var buildSuccessSentinels = ['All is well', 'build succeeded', 'PASS'];
-                var buildFailureSentinels = ['build failed', 'FAIL'];
-                var daysOfWeek = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-                
-                var approveStatus = function(status, url) {
-                    switch (status) {
-                    case 'approved':
-                        return '<a class="text-success" href="' + url + '"><span class="glyphicon glyphicon-ok"></span><span class="hidden">1</span></a>';
-                    case 'pending_review':
-                        return '<a class="text-primary" href="' + url + '"><span class="glyphicon glyphicon-eye-open"></span><span class="hidden">2</span></a>';
-                    case 'pending_changes':
-                        return '<a class="text-danger" href="' + url + '"><span class="glyphicon glyphicon-wrench"></span><span class="hidden">3</span></a>';
-                    default:
-                        return '<span class="text-muted">&mdash;<span class="hidden">4</span></span>';
-                    }
-                };
-                
-                var updateApprovalStatus = function(repo_api, pull, cb) {
-                    repo_api.getCommit(pull.head.sha, function(err, commit) {
-                        var commit_date = commit.committer.date;
-                
-                        repo_api.listComments(pull.number, function(err, comments) {
-                            var approve_status = 'pending_review';
-                            var approve_url = commit.html_url;
-                            var first_pass_day = '';
-                            var first_pass_url = '';
-                            
-                            $.each(comments, function(i, comment) {
-                                var comment_date = comment.updated_at;
-                                if (comment_date >= commit_date) {
-                                    // Get the comment text by converting it from Markdown to HTML, then stripping the HTML markup
-                                    var body_html = new Showdown.converter().makeHtml(comment.body);
-                                    var body = $("<div/>").html(body_html).text();
-                                    
-                                    var hasSentinel = function(text, sentinels) {
-                                        return sentinels.some(function(s) {
-                                            return text.indexOf(s) >= 0;
-                                        })
-                                    };
 
-                                    if (!hasSentinel(body, ignoredSentinels) && !hasSentinel(body, buildFailureSentinels) && !hasSentinel(body, buildSuccessSentinels)) {
-                                        if (hasSentinel(body, approveSentinels)) {
-                                            approve_status = 'approved';
-                                            approve_url = comment.html_url;
-                                        } else if (pull.user.login == comment.user.login) {
-                                            approve_status = 'pending_review';
-                                            approve_url = comment.html_url;
-                                        } else {
-                                            approve_status = 'pending_changes';
-                                            approve_url = comment.html_url;
-                                        }
-                                    }
-    
-                                    if (first_pass_day == '' && hasSentinel(body, buildSuccessSentinels)) {
-                                        first_pass_day = comment_date;
-                                        first_pass_url = comment.html_url;
-                                    }
-                                }
-                            });
-
-                            $('#pull-' + pull.id + ' .approve').html(approveStatus(approve_status, approve_url));
-                            $("#pull-requests").trigger("update");
-                            
-                            $('#pull-' + pull.id + ' .pass_day').html(passDay(first_pass_day, first_pass_url));
-                            $("#pull-requests").trigger("update");
-                            
-                            cb(err);
-                        });
-                    });
-                };
-                
-                var verifyStatus = function(status, url) {
-                    switch (status) {
-                    case 'success':
-                        if (url == null) {
-                            return '<span class="text-success"><span class="glyphicon glyphicon-ok"></span><span class="hidden">1</span></span>';
-                        } else {
-                            return '<a class="text-success" href="' + url + '"><span class="glyphicon glyphicon-ok"></span><span class="hidden">1</span></a>';
-                        }
-                    case 'pending':
-                        if (url == null) {
-                            return '<span class="text-primary"><span class="glyphicon glyphicon-time"></span><span class="hidden">3</span></span>';
-                        } else {
-                            return '<a href="' + url + '"><span class="glyphicon glyphicon-time"></span><span class="hidden">3</span></a>';
-                        }
-                    case 'error':
-                    case 'failure':
-                        if (url == null) {
-                            return '<span class="text-danger"><span class="glyphicon glyphicon-remove"></span><span class="hidden">2</span></span>';
-                        } else {
-                            return '<a class="text-danger" href="' + url + '"><span class="glyphicon glyphicon-remove"></span><span class="hidden">2</span></a>';
-                        }
-                    default:
-                        return '<span class="text-muted">&mdash;<span class="hidden">4</span></span>';
-                    }
-                };
-                
-                var passDay = function(first_pass_day, first_pass_url) {
-                    // Convert the date to a two digit day and make it a link to the build.
-                    if (first_pass_day == '') {
-                        return '<span class="text-muted">&mdash;<span class="hidden">8</span></span>';
-                    } else {
-                        var date = new Date(first_pass_day);
-                        var dayIndex = date.getDay();
-                        var dayName = daysOfWeek[dayIndex];
-                        
-                        return '<span class="text-success">' + dayName + '<span class="hidden">' + (dayIndex + 1) + '</span></span>';
-                    }
-                };
-                
-                var updateVerificationStatus = function(repo_api, pull, cb) {
-                    repo_api.listStatuses(pull.head.sha, function(err, statuses) {
-                        var verify_status = '';
-                        var verify_url = '';
-                        
-                        if (statuses.length > 0) {
-                            var status = statuses[0];
-                            verify_status = status.state;
-                            verify_url = status.target_url;
-                        }
-            
-                        $('#pull-' + pull.id + ' .verify').html(verifyStatus(verify_status, verify_url));
-                        $("#pull-requests").trigger("update");
-                        
-                        cb(err);
-                    });
-                };
-
-                var getRepoPulls = function(github_api, repo, cb) {
-                    var repo_api = github_api.getRepo(repo.owner.login, repo.name);
-                 
-                    async.waterfall([
-                        function(cb) {
-                            // Get the pull requests for this repo
-                            repo_api.listPulls('open', function(err, pulls) {
-                                if (pulls.length > 0) {
-                                    $.each(pulls, function(i, pull) {
-                                        pull.created_at_humanized = new Date(Date.parse(pull.created_at)).toLocaleString();
-                                    });
-                                
-                                    var template = Handlebars.compile($("#pull-requests-rows-template").html());
-                                    $('#pull-requests tbody').append(template({
-                                        repo: repo,
-                                        pulls: pulls,
-                                    }));
-                                    $("#pull-requests").trigger("update");
-                                }
-                            
-                                cb(err, pulls);
-                            });
-                        },
-                        function(pulls, cb) {
-                            var tasks = [];
-                        
-                            $.each(pulls, function(i, pull) {
-                                tasks.push(function() {
-                                    updateVerificationStatus(repo_api, pull, cb);
-                                });
-                                tasks.push(function() {
-                                    updateApprovalStatus(repo_api, pull, cb);
-                                });
-                            });
-                        
-                            async.parallel(tasks, function(err, results) {
-                                cb(err);
-                            });
-                        },
-                    ], function(err) {
-                        cb(err);
-                    });
-                };
-                
-                var getRepos = function(user_api, cb) {
-                    // Get the user's repos
-                    user_api.repos(function(err, repos) {
-                        cb(repos.sort(function compare(a, b) {
-                            return a.full_name.localeCompare(b.full_name);
-                        }));
-                    });
-                };
-                
-                var refresh = function() {
-                    if ((localStorage['username'] && localStorage['password']) || localStorage['token']) {
-                        $('#auth').html('<li><p class="navbar-text">Connecting...</p></li>');
-                        $('#pull-requests tbody').html('');
-                        
-                        if (localStorage['token']) {
-                            options = {
-                                token: localStorage['token'],
-                                auth: 'oauth',
-                            };
-                        } else {
-                            options = {
-                                username: localStorage['username'],
-                                password: localStorage['password'],
-                                auth: 'basic',
-                            };
-                        }
-                
-                        var github_api = new Github(options);
-                
-                        var user_api = github_api.getUser();
-                
-                        user_api.show(null, function(err, user) {
-                            if (err) {
-                                localStorage.removeItem('password');
-                                localStorage.removeItem('token');
-                                refresh();
-                            } else {
-                                var template = Handlebars.compile($("#auth-signed-in-template").html());
-                                $('#auth').html(template({
-                                    user: user,
-                                }));
-                
-                                getRepos(user_api, function(repos) {
-                                    var filteredRepos = [];
-                                    var repoFilter = localStorage['repo-filter'];
-                                    if (typeof repoFilter == 'undefined' || repoFilter.length <= 0) {
-                                    	filteredRepos = repos
-                                    } else {
-                                    	var repoFilter = new RegExp(repoFilter);
-                                    	$.each(repos, function(i, repo) {
-                                        	if (repo.name.match(repoFilter) == null) {
-                                         	   filteredRepos.push(repo);
-                                        	}
-                                    	});
-                                    }
-                                        
-                                    async.forEach(filteredRepos, function(repo, cb) {
-                                        getRepoPulls(github_api, repo, cb);
-                                    });
-                                });
-                            }
-                        });
-                    } else {
-                        var template = Handlebars.compile($("#auth-not-signed-in-template").html());
-                        $('#auth').html(template());
-                    }
-                }
-                $('#auth-modal').on('shown.bs.modal', function() {
-                    $('#auth-modal-username').focus();
-                });
-                
-                $(document).on('click', '.auth-sign-out', function() {
-                    localStorage.removeItem('password');
-                    localStorage.removeItem('token');
-                    refresh();
-                    
-                    return false;
-                });
-                
-                $(document).on('click', '.auth-sign-in', function() {
-                    $('#auth-modal-username').val(localStorage['username']);
-                    $('#auth-modal-password').val('');
-                    $('#auth-modal-token').val('');
-                    $('#auth-modal').modal('show');
-                    
-                    return false;
-                });
-                
-                $(document).on('click', '#auth-modal-connect', function() {
-                    localStorage['username'] = $('#auth-modal-username').val();
-                    localStorage['password'] = $('#auth-modal-password').val();
-                    localStorage['token'] = $('#auth-modal-token').val();
-                    refresh();
-                    
-                    $('#auth-modal').modal('hide');
-                    
-                    return false;
-                });
-                
-                $.extend($.tablesorter.themes.bootstrap, {
-                    table: 'table',
-                    sortNone: '',
-                    sortAsc: 'glyphicon glyphicon-chevron-up',
-                    sortDesc: 'glyphicon glyphicon-chevron-down',
-                });
-                
-                $.tablesorter.addParser({
-                    id: 'datadate',
-                    is: function() {
-                        return false;
-                    },
-                    format: function(s, table, cell, cellIndex) {
-                        return $(cell).data('date');
-                    },
-                    type: 'text'
-                });
-                
-                $('#repo-filter').val(localStorage['repo-filter']);
-                
-                $('#repo-filter').change(function() {
-                    localStorage['repo-filter'] = $('#repo-filter').val();
-                    refresh();
-                });
-                
-                $('#repo-filter').closest('form').submit(function(event) {
-                    localStorage['repo-filter'] = $('#repo-filter').val();
-                    return false;
-                });
-
-                $("#pull-requests").tablesorter({
-                    theme: 'bootstrap',
-                    headerTemplate: '{content} {icon}',
-                    widgets: [ "uitheme" ],
-                    headers: { 3: { sorter: 'datadate' } },
-                    sortList: [[3,1]],
-                });
-                
-                refresh();
-            });
-        </script>
+        <script src="js/GitHub.js"></script>
+        <script src="js/index.js"></script>
     </body>
 </html>
