@@ -9,7 +9,7 @@ class GitHub {
 
     getUser(cb) {
         if (this._username != null) {
-            cb(null, this._username);
+            cb(null, {login: this._username});
         } else {
             this._request("GET", "/user", null, function(err, user) {
                 cb(err, user);
@@ -67,7 +67,7 @@ class GitHub {
         if (this._token) {
             xhr.setRequestHeader('Authorization', 'token ' + options.token)
         } else if (this._username && this._password) {
-            xhr.setRequestHeader('Authorization', 'Basic ' + Base64.encode(auth.username + ':' + auth.password));
+            xhr.setRequestHeader('Authorization', 'Basic ' + btoa(this._username + ':' + this._password));
         } else {
             cb({path: path, request: this, error: "No authentication"})
         }
