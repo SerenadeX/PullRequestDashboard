@@ -1,6 +1,3 @@
-[submodule "Vendor/github"]
-	path = Vendor/github
-	url = https://github.com/GalacticMegacorp/github.git
 [submodule "Vendor/tablesorter"]
 	path = Vendor/tablesorter
 	url = https://github.com/Mottie/tablesorter.git
