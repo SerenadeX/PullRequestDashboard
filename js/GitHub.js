@@ -11,8 +11,8 @@ class GitHub {
         if (this._username != null) {
             cb(null, this._username);
         } else {
-            this._request("GET", "/user", null, function(err, res) {
-                cb(err, res.login);
+            this._request("GET", "/user", null, function(err, user) {
+                cb(err, user);
             });
         }
     }
