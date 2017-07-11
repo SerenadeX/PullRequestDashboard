@@ -55,23 +55,12 @@ $(function() {
         }
     };
 
-    var passDay = function(first_pass_day, first_pass_url) {
-        // Convert the date to a two digit day and make it a link to the build.
-        if (first_pass_day == '') {
-            return '<span class="text-muted">&mdash;<span class="hidden">8</span></span>';
-        } else {
-            var date = new Date(first_pass_day);
-            var dayIndex = date.getDay();
-            var dayName = daysOfWeek[dayIndex];
-
-            return '<span class="text-success">' + dayName + '<span class="hidden">' + (dayIndex + 1) + '</span></span>';
-        }
-    };
-
     var updateVerificationStatus = function(githubAPI, repo, pull, cb) {
         githubAPI.getStatuses(repo, pull.head.sha, function(err, status) {
-            $('#pull-' + pull.id + ' .verify').html(verifyStatus(status.state));
-            $("#pull-requests").trigger("update");
+            if (status.statuses.length > 0) {
+                $('#pull-' + pull.id + ' .verify').html(verifyStatus(status.state));
+                $("#pull-requests").trigger("update");
+            }
 
             cb(err);
         });
