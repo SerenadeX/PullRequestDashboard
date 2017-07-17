@@ -24,7 +24,7 @@ $(function() {
             for (var i = 0; i < reviews.length; i++) {
                 var review = reviews[i];
 
-                if (review.state === 'CHANGES_REQUESTED') {
+                if (review.state === 'CHANGES_REQUESTED' && pull.head.sha === review.commit_id) {
                     approve_status = 'pending_changes';
                     break;
                 } else if (review.state === 'APPROVED') {
